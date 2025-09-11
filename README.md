@@ -2,12 +2,10 @@
 
 A modern, feature-rich dashboard for game providers built with Next.js, TypeScript, and Tailwind CSS.
 
-Demo: https://jest.bet/
-DOCS https://jest.bet/docs
 ## 💎 API Access
 
 For API key access and integration support:
-- 12% GGR 
+- 15% GGR 
 - Contact: [@blancos13](https://t.me/blancos13) on Telegram
 - Full access to all providers and features
 - 24/7 technical support
@@ -17,8 +15,7 @@ For API key access and integration support:
 ## Features
 ![image](https://github.com/user-attachments/assets/fd6d06e2-0431-43ae-b737-464a295049d0)
 ![image](https://github.com/user-attachments/assets/3e1aee87-d54b-41ac-a353-2864b4be55d7)
-![image](https://github.com/user-attachments/assets/e2c286d3-f074-4599-aa77-e57fa110e59f)
-
+![image](https://github.com/user-attachments/assets/e2c286d3-f074-4599-aa77-
 ### 🎮 Game Management
 - **Supported Game Providers:**
   - **Tier 1 Providers:**
