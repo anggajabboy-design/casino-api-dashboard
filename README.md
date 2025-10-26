@@ -355,67 +355,12 @@ MONGODB_URI=mongodb://localhost:27017/stargate
 JWT_SECRET=your_jwt_secret
 ```
 
-If you want to use Supabase (Postgres) instead of MongoDB, set these instead for the backend:
-
-```bash
-# Backend (.env) - Supabase mode
-DB_PROVIDER=supabase
-SUPABASE_URL=https://xyzcompany.supabase.co
-SUPABASE_KEY=your-service-role-or-api-key
-# You can still set ALLOWED_ORIGINS to allow your frontend domain(s)
-# Example: ALLOWED_ORIGINS=https://your-project.vercel.app
-```
-
-Notes:
-- The repository's models and services are currently implemented with Mongoose/MongoDB. Setting `DB_PROVIDER=supabase` will initialize a Supabase client but does not automatically migrate models/services — that's a separate migration effort described below.
-- For a gradual migration, run backend with `DB_PROVIDER=supabase` and implement individual services/models against Supabase as needed.
-
 4. Run the development servers:
 ```bash
 # Frontend
 npm run dev
 
 # Backend
-npm run dev
-```
-
-## Deployment
-
-This repo separates frontend (Next.js static export) and backend (Node/Express + Apollo). Frontend can be deployed to Vercel; backend must be hosted separately (Render, Heroku, Railway, VPS, etc.) and expose a HTTPS GraphQL endpoint.
-
-Quick checklist for a successful deployment:
-
-- Deploy backend first and note its HTTPS URL (example: https://api.example.com).
-- On your backend host, set environment variables: `MONGODB_URI`, `JWT_SECRET`, and optionally `ALLOWED_ORIGINS` (comma-separated allowed frontend origins). The server will respect `process.env.PORT` if provided; otherwise it falls back to 2053.
-- On Vercel (or other static host) set these environment variables for the frontend project:
-  - `NEXT_PUBLIC_API_URL` — base URL of the backend, e.g. `https://api.example.com` (used by `lib/apollo-client.ts`).
-  - `NEXT_PUBLIC_WS_URL` — websocket URL if your deployment uses websockets (e.g. `wss://api.example.com`).
-
-Vercel deployment steps (summary):
-
-1. Connect the GitHub repository to Vercel.
-2. In Project Settings → Environment Variables add `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_WS_URL` as needed.
-3. Build & Output settings: leave default (Vercel will run `npm run build`). Because `next.config.mjs` sets `output: 'export'`, Next will produce a static export in `build/`.
-4. Deploy. After deployment the static frontend will call the GraphQL endpoint configured in `NEXT_PUBLIC_API_URL`.
-
-Notes & common pitfalls:
-
-- `lib/apollo-client.ts` prefers `NEXT_PUBLIC_API_URL` in production; confirm this env var is set in Vercel. If not set, the client falls back to `https://moonshoot.fun:2053`.
-- Backend CORS is configured in `backend/src/index.js`. In production it allows `https://moonshoot.fun` by default — add your Vercel URL to `ALLOWED_ORIGINS` (comma-separated) or update backend config before deploying.
-- The `server.js` file in project root is a static site server for self-hosting the exported build and will try to load SSL files from `/ssl`. This is not used by Vercel (Vercel serves the static files automatically).
-
-Local sanity test before deploying:
-
-```bash
-# Start backend locally
-cd backend
-export MONGODB_URI="mongodb://localhost:27017/stargate"
-export JWT_SECRET="devsecret"
-npm run dev
-
-# In a new terminal, start frontend (point to local backend)
-cd /workspaces/casino-api-dashboard
-export NEXT_PUBLIC_API_URL="http://localhost:2053"
 npm run dev
 ```
 
