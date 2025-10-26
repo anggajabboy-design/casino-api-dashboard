@@ -5,11 +5,11 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.warn('Supabase not configured: SUPABASE_URL or SUPABASE_KEY is missing');
+  console.warn('Supabase not configured: SUPABASE_URL or SUPABASE_KEY is missing — exporting null supabase client');
+  module.exports = { supabase: null };
+} else {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+    // Optional: add any global options here
+  });
+  module.exports = { supabase };
 }
-
-const supabase = createClient(SUPABASE_URL || '', SUPABASE_KEY || '', {
-  // Optional: add any global options here
-});
-
-module.exports = { supabase };
