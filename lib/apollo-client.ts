@@ -6,16 +6,22 @@ import Cookies from 'js-cookie';
 const TOKEN_KEY = 'auth_token';
 
 // API URL configuration based on environment
-const apiUrl = process.env.NODE_ENV === 'production'
-  ? 'https://moonshoot.fun:2053'
-  : 'http://localhost:2053';
+// Prefer explicit NEXT_PUBLIC_API_URL (set this in Vercel / hosting env). Fallback to
+// the historical hardcoded production host or localhost for development.
+const apiUrl = process.env.NEXT_PUBLIC_API_URL
+  || (process.env.NODE_ENV === 'production' ? 'https://moonshoot.fun:2053' : 'http://localhost:2053');
 
-console.log('Environment:', process.env.NODE_ENV);
-console.log('API URL:', apiUrl);
+// Helpful debug logs in development
+if (process.env.NODE_ENV !== 'production') {
+  // eslint-disable-next-line no-console
+  console.log('Environment:', process.env.NODE_ENV);
+  // eslint-disable-next-line no-console
+  console.log('API URL:', apiUrl);
+}
 
 // HTTP link with credentials
 const httpLink = createHttpLink({
-  uri: `${apiUrl}/graphql`,
+  uri: `${apiUrl.replace(/\/$/, '')}/graphql`,
   credentials: 'include',
   fetchOptions: {
     credentials: 'include',

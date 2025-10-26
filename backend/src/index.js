@@ -23,8 +23,8 @@ const { depositWatcher } = require('./services/depositWatcher');
 const { merchantDepositWatcher } = require('./services/merchantDepositWatcher');
 const path = require('path');
 
-// Force production port
-const PORT = 2053;
+// Port configuration: prefer environment PORT (hosted platforms typically provide this).
+const PORT = process.env.PORT || 2053;
 
 // Only require https and fs in production
 const https = process.env.NODE_ENV === 'production' ? require('https') : null;
@@ -38,33 +38,40 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // CORS configuration
-const corsOptions = {
-  origin: function(origin, callback) {
-    const allowedOrigins = process.env.NODE_ENV === 'production'
-      ? ['https://moonshoot.fun', 'https://www.moonshoot.fun']
-      : ['http://localhost:3000'];
-    
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'X-Requested-With',
-    'Access-Control-Allow-Origin',
-    'Access-Control-Allow-Credentials',
-    'Access-Control-Allow-Headers',
-    'Access-Control-Allow-Methods'
-  ],
-  exposedHeaders: ['Authorization'],
-  maxAge: 86400 // 24 hours
-};
+  // Build allowed origins from env (comma separated) or use sensible defaults
+  const defaultAllowed = process.env.NODE_ENV === 'production'
+    ? ['https://moonshoot.fun', 'https://www.moonshoot.fun']
+    : ['http://localhost:3000'];
+
+  const allowedFromEnv = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+
+  const allowedOrigins = Array.from(new Set([...defaultAllowed, ...allowedFromEnv]));
+
+  const corsOptions = {
+    origin: function(origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Access-Control-Allow-Origin',
+      'Access-Control-Allow-Credentials',
+      'Access-Control-Allow-Headers',
+      'Access-Control-Allow-Methods'
+    ],
+    exposedHeaders: ['Authorization'],
+    maxAge: 86400 // 24 hours
+  };
 
 app.use(cors(corsOptions));
 
@@ -106,8 +113,20 @@ const server = new ApolloServer({
 
 async function startServer() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('Connected to MongoDB');
+    // Initialize database provider (MongoDB or Supabase)
+    if (process.env.DB_PROVIDER === 'supabase') {
+      // Lazy require Supabase client to avoid loading when not used
+      const { supabase } = require('./supabaseClient');
+      console.log('Using Supabase as DB provider');
+      if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
+        console.warn('SUPABASE_URL or SUPABASE_KEY not set - Supabase may not work correctly');
+      }
+      // Note: Services and models are still Mongoose-based by default. Full migration
+      // requires updating models/services to use Supabase (Postgres) APIs.
+    } else {
+      await mongoose.connect(process.env.MONGODB_URI);
+      console.log('Connected to MongoDB');
+    }
 
     await server.start();
     
@@ -117,15 +136,21 @@ async function startServer() {
       path: '/graphql'
     });
 
-    // Initialize services
-    await depositWatcher.start();
-    await merchantDepositWatcher.start();
-    
-    // Initialize games
-    console.log('🎮 Starting game service...');
-    await fetchAndSaveGames(false);
-    await startDailyUpdates();
-    console.log('🎮 Game service initialized');
+    // Initialize services (skip mongoose-based background services when using Supabase scaffold)
+    if (process.env.DB_PROVIDER === 'supabase') {
+      console.log('DB_PROVIDER=supabase: skipping mongoose-based background services (depositWatcher, merchantDepositWatcher, gameService).');
+      console.log('Implement Supabase-backed services or remove this guard to enable Mongoose services.');
+    } else {
+      // Initialize services
+      await depositWatcher.start();
+      await merchantDepositWatcher.start();
+
+      // Initialize games
+      console.log('🎮 Starting game service...');
+      await fetchAndSaveGames(false);
+      await startDailyUpdates();
+      console.log('🎮 Game service initialized');
+    }
 
     // Use forced PORT
     console.log(`Using port: ${PORT}`);
